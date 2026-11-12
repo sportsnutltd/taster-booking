@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book your taster - Sports Nut</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Sports Nut - taster booking page. Parents enter the code from their invite email,
+   check their availability, choose a taster and send a booking request. */
+:root {
+  --bg: #F6F7F9; --card: #FFFFFF; --ink: #1F2328; --text: #3A4049; --muted: #59616B; --line: #DDE1E6; --field: #B8BFC8;
+  --blue: #0B6E99; --blue-dark: #084F6E; --blue-soft: #E7F5FC; --red: #C7352D; --red-dark: #A82B24;
+  --green-soft: #DFF3E6; --green: #1E7A3E; --warn-soft: #FFF4D6; --warn: #7A5600; --err: #B42318; --err-soft: #FDECEA;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 16px; line-height: 1.5; }
+header { background: #2B2B2B; padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; }
+.logo { color: #FFFFFF; font-weight: 700; font-size: 20px; letter-spacing: .5px; }
+.logo span { color: #41B8E8; }
+.tag { color: #D0D4DA; font-size: 13px; }
+.stripe { height: 6px; background: var(--red); }
+main { max-width: 560px; margin: 0 auto; padding: 28px 16px 48px; display: flex; flex-direction: column; gap: 18px; }
+.step { font-size: 13px; color: var(--muted); font-weight: 600; }
+h1 { margin: 0; font-size: 28px; line-height: 1.2; }
+h2 { margin: 0; font-size: 18px; }
+p { margin: 0; color: var(--text); }
+a { color: var(--blue); }
+a:hover { color: var(--blue-dark); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.info { background: var(--blue-soft); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; }
+.note { background: var(--warn-soft); color: var(--warn); border-radius: 10px; padding: 12px 14px; font-size: 14px; }
+.error { background: var(--err-soft); color: var(--err); border-radius: 10px; padding: 12px 14px; font-size: 15px; }
+.error:empty, .note:empty { display: none; }
+label, legend { font-size: 15px; font-weight: 600; }
+.hint { font-size: 13px; color: var(--muted); }
+input[type=text], input[type=email], input[type=tel], select, textarea {
+  font: inherit; font-size: 16px; width: 100%; padding: 11px 12px; border: 1px solid var(--field); border-radius: 8px; color: var(--ink); background: #FFFFFF; min-height: 46px; }
+textarea { min-height: 80px; resize: vertical; }
+input:focus, select:focus, textarea:focus, button:focus-visible { outline: 3px solid #8CCBE6; outline-offset: 1px; }
+input[readonly] { background: #F0F2F5; color: var(--muted); }
+#code { font-size: 22px; letter-spacing: 3px; font-weight: 600; text-transform: uppercase; border: 2px solid var(--blue); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 420px) { .row2 { grid-template-columns: 1fr; } }
+.check { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; font-weight: 500; }
+.check input { width: 22px; height: 22px; margin: 1px 0 0; flex: none; accent-color: var(--blue); }
+.radios { display: flex; gap: 20px; }
+fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.btn { font: inherit; font-size: 17px; font-weight: 600; border-radius: 10px; padding: 13px 16px; min-height: 50px; cursor: pointer; width: 100%; }
+.btn.primary { background: var(--red); color: #FFFFFF; border: none; }
+.btn.primary:hover { background: var(--red-dark); }
+.btn.secondary { background: #FFFFFF; color: var(--blue); border: 1px solid var(--blue); font-size: 15px; }
+.btn.link { background: none; border: none; color: var(--blue); font-size: 15px; text-decoration: underline; min-height: 40px; }
+.btn:disabled { opacity: .6; cursor: default; }
+.venue { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+.venue:first-of-type { border-top: 0; padding-top: 0; }
+.dayrow { display: grid; grid-template-columns: 130px 1fr; gap: 8px; align-items: center; }
+.dayrow .times { display: grid; grid-template-columns: 1fr 96px; gap: 8px; }
+.dayrow .times.any { grid-template-columns: 1fr; }
+@media (max-width: 420px) { .dayrow { grid-template-columns: 1fr; } }
+.opt { font: inherit; display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; min-height: 64px;
+  border-radius: 12px; cursor: pointer; background: #FFFFFF; border: 1px solid var(--line); text-align: left; color: var(--ink); }
+.opt[aria-pressed=true] { background: var(--blue-soft); border: 2px solid var(--blue); }
+.opt .when { font-size: 16px; font-weight: 600; }
+.opt .where { font-size: 14px; color: var(--text); }
+.pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap; background: #EEF0F3; color: var(--text); }
+.opt[aria-pressed=true] .pill { background: var(--blue); color: #FFFFFF; }
+.tick { width: 56px; height: 56px; border-radius: 50%; background: var(--green-soft); display: flex; align-items: center; justify-content: center; }
+.small { font-size: 13px; color: var(--muted); }
+.hidden { display: none !important; }
+.req::after { content: " *"; color: var(--err); }
+</style>
+</head>
+<body>
+<header><div class="logo">SPORTS <span>NUT</span></div><div class="tag">Taster booking</div></header>
+<div class="stripe"></div>
+<main id="app" aria-live="polite"></main>
+
+<script>
+// The web app address of the "Sports Nut Tasters" Google Sheet (Deploy > Manage deployments > Web app URL)
+var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzgOyClEZ3dNg_lBjkIp-TSxt6qGLa_zyeb1gT5cucS7yji63cgeeWVAEG8r8TRXZi2dg/exec';
+
+var HEARD = ['Friend or family', 'Google search', 'Social media', 'School', 'Saw the pool / a poster', 'Other'];
+var GENDERS = ['Female', 'Male', 'Prefer not to say'];
+var DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+var PRIVACY_URL = 'https://www.sports-nut.co.uk/privacy-policy/';
+
+var app = document.getElementById('app');
+var ST = { code: '', email: '', data: null, avail: null, availText: '', availChanged: false, option: null };
+
+// ---------- helpers ----------
+function el(tag, attrs, kids) {
+  var n = document.createElement(tag);
+  Object.keys(attrs || {}).forEach(function (k) {
+    if (k === 'text') n.textContent = attrs[k];
+    else if (k === 'class') n.className = attrs[k];
+    else if (k.slice(0, 2) === 'on') n.addEventListener(k.slice(2), attrs[k]);
+    else if (attrs[k] === true) n.setAttribute(k, '');
+    else if (attrs[k] !== false && attrs[k] != null) n.setAttribute(k, attrs[k]);
+  });
+  (kids || []).forEach(function (c) { if (c != null) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+  return n;
+}
+function screen(nodes) { app.textContent = ''; nodes.forEach(function (n) { if (n) app.appendChild(n); }); window.scrollTo(0, 0); var h = app.querySelector('h1'); if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); } }
+function names(list) { return list.length <= 1 ? (list[0] || '') : list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1]; }
+function kidsNames() { return names(ST.data.kids.map(function (k) { return k.first; })); }
+function field(id, label, input, hint, required) {
+  input.id = id;
+  return el('div', { class: 'field' }, [el('label', { for: id, class: required ? 'req' : null, text: label }), input, hint ? el('div', { class: 'hint', text: hint }) : null]);
+}
+function select(opts, value) {
+  var s = el('select');
+  s.appendChild(el('option', { value: '', text: 'Please choose' }));
+  opts.forEach(function (o) { var op = el('option', { value: o, text: o }); if (o === value) op.selected = true; s.appendChild(op); });
+  return s;
+}
+function call(body) {
+  return fetch(APPS_SCRIPT_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
+    .then(function (r) { return r.json(); });
+}
+function busy(btn, text) { btn.disabled = true; btn.dataset.label = btn.textContent; btn.textContent = text; }
+function idle(btn) { btn.disabled = false; btn.textContent = btn.dataset.label || btn.textContent; }
+function longDate(ddmmyyyy, dayName) { return (dayName ? dayName + ' ' : '') + ddmmyyyy; }
+
+// ---------- 1. code ----------
+function showCode(msg) {
+  var q = new URLSearchParams(location.search);
+  var code = el('input', { type: 'text', autocomplete: 'off', autocapitalize: 'characters', spellcheck: 'false', value: ST.code || q.get('code') || '', placeholder: 'e.g. K7Q-4MX' });
+  var email = el('input', { type: 'email', autocomplete: 'email', value: ST.email || q.get('email') || '' });
+  var err = el('div', { class: 'error', role: 'alert', text: msg || '' });
+  var go = el('button', { type: 'submit', class: 'btn primary', text: 'Continue' });
+  var form = el('form', { class: 'card', novalidate: true, onsubmit: function (e) {
+    e.preventDefault();
+    var c = code.value.trim(), m = email.value.trim();
+    if (!c || !m) { err.textContent = 'Please enter your code and email address.'; return; }
+    busy(go, 'Checking...'); err.textContent = '';
+    call({ action: 'check', code: c, email: m }).then(function (r) {
+      idle(go);
+      if (!r.ok) { err.textContent = r.error || 'Sorry, something went wrong.'; return; }
+      ST.code = c; ST.email = m; ST.data = r;
+      showAvailability();
+    }).catch(function () { idle(go); err.textContent = 'We couldn\'t connect. Please check your internet and try again.'; });
+  } }, [
+    field('code', 'Your taster code', code),
+    field('email', 'Your email address', email, 'Please use the email address from your Join Us form.'),
+    err, go
+  ]);
+  screen([
+    el('div', { class: 'step', text: 'Step 1 of 4' }),
+    el('h1', { text: 'Book your taster session' }),
+    el('p', { text: 'Enter the code from your email, and the email address you used on our Join Us form, to choose a date that suits you.' }),
+    form,
+    el('div', { class: 'info' }, [el('div', { style: 'font-weight:600', text: 'What is a taster?' }),
+      el('p', { style: 'font-size:14px', text: 'A fun 15-minute first taste of lessons at Sports Nut. It helps us place your swimmer in the right Sports Nut Award level, meet some of our staff and settle any pre-lesson nerves.' })]),
+    el('p', { class: 'small' }, ['Need help? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])
+  ]);
+}
+
+// ---------- 2. availability ----------
+function venueHint(v) {
+  var t = (ST.data.venueTimes || {})[v] || {}, days = ST.data.venueDays[v] || [];
+  var wk = days.filter(function (d) { return d !== 'Saturday' && d !== 'Sunday'; });
+  var wkTimes = wk.map(function (d) { return t[d]; }).filter(Boolean).sort();
+  var bits = [];
+  if (wk.length) bits.push((wk.length === 5 ? 'Weekdays' : names(wk)) + (wkTimes.length ? ' from ' + wkTimes[0] : ''));
+  if (days.indexOf('Saturday') >= 0 || days.indexOf('Sunday') >= 0) bits.push('weekends');
+  return bits.join(', and ');
+}
+function startAvail() {
+  if (ST.avail) return ST.avail;
+  var a = {}, d = ST.data;
+  Object.keys(d.venueDays).forEach(function (v) {
+    var on = d.venues.indexOf(v) >= 0;
+    a[v] = { on: on, days: {} };
+    d.venueDays[v].forEach(function (day) { a[v].days[day] = { on: on && d.days.indexOf(day) >= 0, mode: 'Any time', time: '' }; });
+  });
+  ST.avail = a; ST.availStart = JSON.stringify(a);
+  return a;
+}
+function availText(a) {
+  return Object.keys(a).filter(function (v) { return a[v].on; }).map(function (v) {
+    var ds = Object.keys(a[v].days).filter(function (d) { return a[v].days[d].on; }).map(function (d) {
+      var x = a[v].days[d]; return d.slice(0, 3) + ' ' + (x.mode === 'Any time' || !x.time ? 'any time' : x.mode.toLowerCase() + ' ' + x.time);
+    });
+    return v + ': ' + (ds.join(', ') || 'no days ticked');
+  }).join('; ');
+}
+function showAvailability() {
+  var d = ST.data, a = startAvail();
+  var err = el('div', { class: 'error', role: 'alert' });
+  var sections = Object.keys(d.venueDays).map(function (v) {
+    var box = el('div', { class: 'venue' });
+    function draw() {
+      box.textContent = '';
+      var vc = el('input', { type: 'checkbox', id: 'v-' + v, checked: a[v].on, onchange: function () { a[v].on = vc.checked; draw(); } });
+      box.appendChild(el('div', { class: 'check' }, [vc, el('label', { for: 'v-' + v, text: (d.addresses[v] || v).split(',').slice(0, 1)[0] + ', ' + ((d.addresses[v] || '').split(',')[2] || '').replace(/ [A-Z0-9]+ [A-Z0-9]+$/, '').trim() })]));
+      var hint = venueHint(v); if (hint) box.appendChild(el('div', { class: 'hint', text: hint }));
+      if (!a[v].on) return;
+      d.venueDays[v].forEach(function (day) {
+        var x = a[v].days[day], id = 'd-' + v + '-' + day;
+        var cb = el('input', { type: 'checkbox', id: id, checked: x.on, onchange: function () { x.on = cb.checked; draw(); } });
+        var row = el('div', { class: 'dayrow' }, [el('div', { class: 'check' }, [cb, el('label', { for: id, text: day })])]);
+        if (x.on) {
+          var sel = el('select', { 'aria-label': day + ' times', onchange: function () { x.mode = sel.value; draw(); } });
+          ['Any time', 'From', 'Until'].forEach(function (m) { var o = el('option', { value: m, text: m }); if (m === x.mode) o.selected = true; sel.appendChild(o); });
+          var times = el('div', { class: 'times' + (x.mode === 'Any time' ? ' any' : '') }, [sel]);
+          if (x.mode !== 'Any time') {
+            var t = el('input', { type: 'text', inputmode: 'numeric', placeholder: '17:30', value: x.time, 'aria-label': day + ' ' + x.mode.toLowerCase(),
+              oninput: function () { x.time = t.value.trim(); } });
+            times.appendChild(t);
+          }
+          row.appendChild(times);
+        }
+        box.appendChild(row);
+      });
+    }
+    draw();
+    return box;
+  });
+  var go = el('button', { type: 'button', class: 'btn primary', text: 'This is right, continue', onclick: function () {
+    var any = false, bad = '';
+    Object.keys(a).forEach(function (v) {
+      if (!a[v].on) return;
+      Object.keys(a[v].days).forEach(function (day) {
+        var x = a[v].days[day]; if (!x.on) return; any = true;
+        if (x.mode !== 'Any time' && !/^\d{1,2}[:.]\d{2}$/.test(x.time)) bad = 'Please put the ' + day + ' time like 17:30.';
+      });
+    });
+    if (!any) { err.textContent = 'Please tick at least one day you could do weekly lessons.'; return; }
+    if (bad) { err.textContent = bad; return; }
+    ST.availText = availText(a);
+    ST.availChanged = JSON.stringify(a) !== ST.availStart;
+    showChoose();
+  } });
+  screen([
+    el('div', { class: 'step', text: 'Step 2 of 4' }),
+    el('h1', { text: 'Is this still right?' }),
+    el('p', { text: 'This is when you told us ' + kidsNames() + ' could do weekly lessons. Please update anything that has changed, so we can offer the right lesson after the taster.' }),
+    el('section', { class: 'card', 'aria-label': 'Venues and days' }, sections),
+    d.limits ? el('div', { class: 'hint' }, ['You first told us: ', el('i', { text: '"' + d.limits + '"' })]) : null,
+    err, go,
+    el('button', { type: 'button', class: 'btn link', text: 'Back', onclick: function () { showCode(); } })
+  ]);
+}
+
+// ---------- 3. choose ----------
+function showChoose(msg) {
+  var d = ST.data, kids = d.kids, group = kids.length > 1;
+  var types = kids.map(function (k) { return k.type; }).filter(function (t, i, l) { return l.indexOf(t) === i; });
+  var list = el('div', { style: 'display:flex;flex-direction:column;gap:10px', role: 'group', 'aria-label': 'Tasters you can choose' });
+  var err = el('div', { class: 'error', role: 'alert', text: msg || '' });
+  var opts = d.options || [];
+  if (ST.option && !opts.some(function (o) { return o.key === ST.option.key; })) ST.option = null;
+  opts.forEach(function (o) {
+    var who = group ? o.slots.map(function (s) { return s.first + ' ' + s.time; }).join(' · ') : o.time;
+    var b = el('button', { type: 'button', class: 'opt', 'aria-pressed': String(!!ST.option && ST.option.key === o.key), onclick: function () {
+      ST.option = o; [].forEach.call(list.children, function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      err.textContent = '';
+    } }, [
+      el('div', {}, [el('div', { class: 'when', text: longDate(o.date, o.day) }), el('div', { class: 'where', text: who + ' · ' + o.venue })]),
+      el('span', { class: 'pill', text: group ? '' : (o.left === 1 ? '1 place' : o.left + ' places') })
+    ]);
+    if (group) b.lastChild.remove();
+    list.appendChild(b);
+  });
+  var go = el('button', { type: 'button', class: 'btn primary', text: 'Choose this taster', onclick: function () {
+    if (!ST.option) { err.textContent = 'Please choose a taster first.'; return; }
+    showDetails();
+  } });
+  var none = el('button', { type: 'button', class: 'btn secondary', text: opts.length ? 'None of these suit me' : 'Let Sports Nut know', onclick: function () {
+    if (!confirmBox(none, 'nonesuit')) return;
+  } });
+  var sibs = d.siblingsWaiting && !group ? el('button', { type: 'button', class: 'btn secondary',
+    text: 'I\'d rather wait until ' + d.siblingsWaiting + ' can come too', onclick: function () { confirmBox(sibs, 'waitsibs'); } }) : null;
+  var weeks = d.weeks || 4;
+  screen([
+    el('div', { class: 'step', text: 'Step 3 of 4' }),
+    el('h1', { text: 'Choose ' + (group ? 'your' : kids[0].first + '\'s') + ' taster' }),
+    ST.availChanged ? el('div', { class: 'note', text: 'Thanks for updating your availability - we\'ll use it when we offer lessons after the taster.' }) : null,
+    el('p', { text: opts.length
+      ? (group ? 'Tasters for ' + kidsNames() + ' on the same visit, at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes.'
+               : types[0] + ' tasters at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes. Pick the one that suits you best.')
+      : 'Sorry, there are no tasters you can book in the next ' + weeks + ' weeks just now. Let us know and we\'ll be in touch when the next ones are ready.' }),
+    list, err,
+    opts.length ? go : null, none, sibs,
+    el('p', { class: 'small', text: 'If none suit, we\'ll keep ' + kidsNames() + ' on our list and be in touch when the next tasters are ready.' }),
+    el('button', { type: 'button', class: 'btn link', text: 'Back', onclick: showAvailability })
+  ]);
+}
+function confirmBox(btn, action) {
+  var d = ST.data;
+  var txt = action === 'nonesuit'
+    ? 'We\'ll keep ' + kidsNames() + ' on our waiting list and be in touch when the next tasters are ready. This code will then stop working.'
+    : 'No problem - we\'ll keep ' + kidsNames() + ' on our waiting list and be in touch when we can offer tasters to ' + kidsNames() + ' and ' + d.siblingsWaiting + ' together. This code will then stop working.';
+  if (btn.dataset.sure !== '1') {
+    btn.dataset.sure = '1'; btn.textContent = 'Yes, that\'s right';
+    btn.parentNode.insertBefore(el('div', { class: 'note', text: txt }), btn);
+    return false;
+  }
+  busy(btn, 'Sending...');
+  call({ action: action, code: ST.code, email: ST.email, siblings: d.siblingsWaiting, availability: ST.availText }).then(function (r) {
+    if (!r.ok) { idle(btn); showChoose(r.error); return; }
+    screen([
+      el('h1', { text: 'Thank you for letting us know' }),
+      el('p', { text: action === 'nonesuit'
+        ? 'We\'ll keep ' + kidsNames() + ' on our waiting list and be in touch when the next tasters are ready. There\'s nothing you need to do in the meantime.'
+        : 'We\'ll keep ' + kidsNames() + ' on our waiting list and be in touch when there\'s room for ' + kidsNames() + ' and ' + d.siblingsWaiting + ' together. There\'s nothing you need to do in the meantime.' }),
+      el('p', { class: 'small' }, ['Questions? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])
+    ]);
+  }).catch(function () { idle(btn); showChoose('We couldn\'t connect. Please check your internet and try again.'); });
+  return true;
+}
+
+// ---------- 4. details ----------
+var DET = { parent: {}, family: { contactBy: [] }, children: {} };
+function showDetails(msg) {
+  var d = ST.data, o = ST.option, p = DET.parent, fm = DET.family;
+  var err = el('div', { class: 'error', role: 'alert', text: msg || '' });
+  function inp(obj, key, type, extra) {
+    var i = el('input', Object.assign({ type: type || 'text', value: obj[key] || '' }, extra || {}));
+    i.addEventListener('input', function () { obj[key] = i.value; });
+    return i;
+  }
+  function sel(obj, key, opts) { var s = select(opts, obj[key]); s.addEventListener('change', function () { obj[key] = s.value; }); return s; }
+  var you = el('section', { class: 'card' }, [
+    el('h2', { text: 'About you' }),
+    el('div', { class: 'row2' }, [field('pf', 'First name', inp(p, 'first', 'text', { autocomplete: 'given-name' }), null, true),
+                                  field('ps', 'Surname', inp(p, 'surname', 'text', { autocomplete: 'family-name' }), null, true)]),
+    field('pe', 'Email', el('input', { type: 'email', value: ST.data.email, readonly: true }), 'The email from your Join Us form.'),
+    field('pm', 'Mobile', inp(p, 'mobile', 'tel', { autocomplete: 'tel' }), null, true),
+    field('pa', 'Address', inp(p, 'address', 'text', { autocomplete: 'street-address' }), null, true),
+    field('pp', 'Postcode', inp(p, 'postcode', 'text', { autocomplete: 'postal-code' }), null, true),
+    field('ph', 'How did you hear about us?', sel(fm, 'heard', HEARD))
+  ]);
+  var kidCards = o.slots.map(function (s, n) {
+    var k = d.kids.filter(function (x) { return x.ticket === s.ticket; })[0];
+    var c = DET.children[s.ticket] = DET.children[s.ticket] || { fullName: k.full, dob: k.dob, medical: '', sameAddress: true };
+    var pre = 'c' + n + '-';
+    var medBox = el('div', { class: 'field' });
+    function drawMed() {
+      medBox.textContent = '';
+      if (c.medical !== 'Yes') return;
+      var ta = el('textarea', { rows: 3 }); ta.value = c.medicalDetails || ''; ta.addEventListener('input', function () { c.medicalDetails = ta.value; });
+      medBox.appendChild(field(pre + 'md', 'Please tell us more', ta, null, true));
+      var cc = el('input', { type: 'checkbox', id: pre + 'mc', checked: !!c.medConsent, onchange: function () { c.medConsent = cc.checked; } });
+      medBox.appendChild(el('div', { class: 'check' }, [cc, el('label', { for: pre + 'mc', text: 'I consent to Sports Nut keeping this medical information to keep ' + k.first + ' safe' })]));
+    }
+    var yes = el('input', { type: 'radio', name: pre + 'med', id: pre + 'my', checked: c.medical === 'Yes', onchange: function () { c.medical = 'Yes'; drawMed(); } });
+    var no = el('input', { type: 'radio', name: pre + 'med', id: pre + 'mn', checked: c.medical === 'No', onchange: function () { c.medical = 'No'; drawMed(); } });
+    drawMed();
+    var addrBox = el('div');
+    function drawAddr() { addrBox.textContent = ''; if (c.sameAddress === false) addrBox.appendChild(field(pre + 'ad', k.first + '\'s address and postcode', inp(c, 'address'), null, true)); }
+    var same = el('input', { type: 'checkbox', id: pre + 'sa', checked: c.sameAddress !== false, onchange: function () { c.sameAddress = same.checked; drawAddr(); } });
+    drawAddr();
+    return el('section', { class: 'card' }, [
+      el('h2', { text: 'About ' + k.first }),
+      el('div', { class: 'hint', text: s.type + ' taster at ' + s.time }),
+      field(pre + 'cn', 'Full name', inp(c, 'fullName'), null, true),
+      el('div', { class: 'row2' }, [field(pre + 'ck', 'Known as', inp(c, 'knownAs')),
+                                    field(pre + 'cd', 'Date of birth', inp(c, 'dob', 'text', { inputmode: 'numeric', placeholder: 'dd/mm/yyyy' }), null, true)]),
+      el('div', { class: 'row2' }, [field(pre + 'cg', 'Gender', sel(c, 'gender', GENDERS), null, true),
+                                    field(pre + 'cl', 'English a second language?', sel(c, 'esl', ['No', 'Yes']), null, true)]),
+      el('div', { class: 'check' }, [same, el('label', { for: pre + 'sa', text: 'Same address as me' })]), addrBox,
+      el('fieldset', {}, [el('legend', { class: 'req', text: 'Does ' + k.first + ' have any medical conditions, allergies or additional needs we should know about?' }),
+        el('div', { class: 'radios' }, [el('div', { class: 'check' }, [yes, el('label', { for: pre + 'my', text: 'Yes' })]),
+                                        el('div', { class: 'check' }, [no, el('label', { for: pre + 'mn', text: 'No' })])])]),
+      medBox,
+      field(pre + 'pc', 'Photo consent', sel(c, 'photo', ['Yes, happy for photos', 'No photos please']), 'Photos are only used as set out in our Privacy Policy.', true),
+      field(pre + 'tn', 'Anything our teacher should know? (optional)', (function () { var t = el('textarea', { rows: 2 }); t.value = c.teacherNotes || ''; t.addEventListener('input', function () { c.teacherNotes = t.value; }); return t; })(),
+        'For example, nervous in the water or wears goggles.')
+    ]);
+  });
+  var contact = el('div', { style: 'display:flex;gap:16px;flex-wrap:wrap' }, ['Email', 'Text', 'Phone', 'Post'].map(function (m) {
+    var id = 'k-' + m, cb = el('input', { type: 'checkbox', id: id, checked: fm.contactBy.indexOf(m) >= 0, onchange: function () {
+      fm.contactBy = fm.contactBy.filter(function (x) { return x !== m; }); if (cb.checked) fm.contactBy.push(m); } });
+    return el('div', { class: 'check' }, [cb, el('label', { for: id, text: m })]);
+  }));
+  var send = el('button', { type: 'button', class: 'btn primary', text: 'Send booking request', onclick: function () {
+    var miss = [];
+    if (!p.first || !p.surname) miss.push('your name');
+    if (!p.mobile) miss.push('your mobile');
+    if (!p.address || !p.postcode) miss.push('your address and postcode');
+    if (!fm.emergencyName || !fm.emergencyPhone) miss.push('an emergency contact');
+    o.slots.forEach(function (s) {
+      var c = DET.children[s.ticket], k = d.kids.filter(function (x) { return x.ticket === s.ticket; })[0];
+      if (!c.fullName || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(String(c.dob || '').trim())) miss.push(k.first + '\'s name and date of birth (dd/mm/yyyy)');
+      if (!c.gender || !c.esl) miss.push(k.first + '\'s gender and language');
+      if (c.sameAddress === false && !c.address) miss.push(k.first + '\'s address');
+      if (!c.medical) miss.push('whether ' + k.first + ' has any medical needs');
+      if (c.medical === 'Yes' && !String(c.medicalDetails || '').trim()) miss.push('details of ' + k.first + '\'s medical needs');
+      if (c.medical === 'Yes' && !c.medConsent) miss.push('your consent for us to keep ' + k.first + '\'s medical information');
+      if (!c.photo) miss.push(k.first + '\'s photo consent');
+    });
+    if (miss.length) { err.textContent = 'Please add ' + names(miss) + '.'; err.scrollIntoView({ block: 'center' }); return; }
+    busy(send, 'Sending...'); err.textContent = '';
+    call({ action: 'book', code: ST.code, email: ST.email, option: o.key, parent: p, family: fm, children: DET.children,
+           availability: ST.availText, availabilityChanged: ST.availChanged }).then(function (r) {
+      if (r.ok) { showDone(r.option || o); return; }
+      idle(send);
+      if (r.gone) {   // that taster has just gone - fetch the latest list
+        call({ action: 'check', code: ST.code, email: ST.email }).then(function (c2) {
+          if (c2.ok) { ST.data = c2; ST.option = null; showChoose(r.error); } else showCode(c2.error);
+        });
+        return;
+      }
+      err.textContent = r.error || 'Sorry, something went wrong. Please try again.';
+    }).catch(function () { idle(send); err.textContent = 'We couldn\'t connect. Please check your internet and try again.'; });
+  } });
+  screen([
+    el('div', { class: 'step', text: 'Step 4 of 4' }),
+    el('h1', { text: 'A few details' }),
+    el('div', { class: 'info' }, [el('div', {}, ['Taster chosen: ', el('b', { text: longDate(o.date, o.day) + ', ' + o.venue })]),
+      el('div', { class: 'small', text: o.slots.map(function (s) { return s.first + ': ' + s.type + ' taster at ' + s.time; }).join(' · ') })]),
+    el('p', { text: 'Fields marked * are needed so we can book the taster.' }),
+    you
+  ].concat(kidCards).concat([
+    el('section', { class: 'card' }, [
+      el('h2', { text: 'Emergency contact' }),
+      el('div', { class: 'row2' }, [field('en', 'Name', inp(fm, 'emergencyName'), null, true), field('ep', 'Phone', inp(fm, 'emergencyPhone', 'tel'), null, true)]),
+      field('er', 'Relationship', inp(fm, 'emergencyRelationship'))
+    ]),
+    el('section', { class: 'card' }, [el('h2', { text: 'Keeping in touch' }), el('div', { class: 'hint', text: 'Happy to hear from us by' }), contact]),
+    err, send,
+    el('p', { class: 'small' }, ['Your details are handled in line with our ', el('a', { href: PRIVACY_URL, target: '_blank', rel: 'noopener', text: 'Privacy Policy' }), '.']),
+    el('button', { type: 'button', class: 'btn link', text: 'Back', onclick: function () { showChoose(); } })
+  ]));
+}
+
+// ---------- 5. done ----------
+function showDone(o) {
+  var group = o.slots.length > 1;
+  screen([
+    el('div', { class: 'tick' }, [(function () {
+      var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); s.setAttribute('width', '28'); s.setAttribute('height', '28'); s.setAttribute('viewBox', '0 0 24 24');
+      s.setAttribute('fill', 'none'); s.setAttribute('stroke', '#1E7A3E'); s.setAttribute('stroke-width', '2.5'); s.setAttribute('aria-hidden', 'true');
+      var pth = document.createElementNS('http://www.w3.org/2000/svg', 'path'); pth.setAttribute('d', 'M5 12l5 5L20 7'); s.appendChild(pth); return s; })()]),
+    el('h1', { text: 'Thank you, we\'ve got your request' }),
+    el('p', { text: 'We\'ve held ' + (group ? 'these places' : 'this place') + ' for ' + kidsNames() + '. Our team will now set up the booking, and you\'ll receive your booking confirmation email from us within 2 working days.' }),
+    el('div', { class: 'card' }, [
+      el('div', { class: 'small', style: 'font-weight:600', text: group ? 'THE TASTERS YOU CHOSE' : 'THE TASTER YOU CHOSE' }),
+      el('div', { style: 'font-size:18px;font-weight:600', text: longDate(o.date, o.day) })
+    ].concat(o.slots.map(function (s) { return el('div', { text: (group ? s.first + ': ' : '') + s.time + ' · ' + s.type + ' taster · 15 minutes' }); }))
+     .concat([el('div', { class: 'small', text: o.address || o.venue })])),
+    el('p', { text: 'Can\'t make it after all? Just email us and we\'ll sort it out.' }),
+    el('p', { class: 'small' }, ['Questions? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])
+  ]);
+}
+
+showCode();
+</script>
+</body>
+</html>
