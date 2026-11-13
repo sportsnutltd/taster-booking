@@ -279,7 +279,6 @@ function showAvailability() {
 // ---------- 3. choose ----------
 function showChoose(msg) {
   var d = ST.data, kids = d.kids, group = kids.length > 1;
-  var types = kids.map(function (k) { return k.type; }).filter(function (t, i, l) { return l.indexOf(t) === i; });
   var list = el('div', { style: 'display:flex;flex-direction:column;gap:10px', role: 'group', 'aria-label': 'Tasters you can choose' });
   var err = el('div', { class: 'error', role: 'alert', text: msg || '' });
   var opts = d.options || [];
@@ -312,7 +311,7 @@ function showChoose(msg) {
     ST.availChanged ? el('div', { class: 'note', text: 'Thanks for updating your availability - we\'ll use it when we offer lessons after the taster.' }) : null,
     el('p', { text: opts.length
       ? (group ? 'Tasters for ' + kidsNames() + ' on the same visit, at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes.'
-               : types[0] + ' tasters at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes. Pick the one that suits you best.')
+               : 'Tasters at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes. Pick the one that suits you best.')
       : 'Sorry, there are no tasters you can book in the next ' + weeks + ' weeks just now. Let us know and we\'ll be in touch when the next ones are ready.' }),
     list, err,
     opts.length ? go : null, none, sibs,
@@ -361,8 +360,10 @@ function showDetails(msg) {
                                   field('ps', 'Surname', inp(p, 'surname', 'text', { autocomplete: 'family-name' }), null, true)]),
     field('pe', 'Email', el('input', { type: 'email', value: ST.data.email, readonly: true }), 'The email from your Join Us form.'),
     field('pm', 'Mobile', inp(p, 'mobile', 'tel', { autocomplete: 'tel' }), null, true),
-    field('pa', 'Address', inp(p, 'address', 'text', { autocomplete: 'street-address' }), null, true),
-    field('pp', 'Postcode', inp(p, 'postcode', 'text', { autocomplete: 'postal-code' }), null, true),
+    el('div', { class: 'row2' }, [field('pn', 'House number or name', inp(p, 'house', 'text', { autocomplete: 'address-line1' }), null, true),
+                                  field('pp', 'Postcode', inp(p, 'postcode', 'text', { autocomplete: 'postal-code' }), null, true)]),
+    field('pa', 'Street and town', inp(p, 'address', 'text', { autocomplete: 'address-line2' }), null, true),
+    field('pl', 'Landline (optional)', inp(p, 'landline', 'tel')),
     field('ph', 'How did you hear about us?', sel(fm, 'heard', HEARD))
   ]);
   var kidCards = o.slots.map(function (s, n) {
@@ -387,7 +388,7 @@ function showDetails(msg) {
     drawAddr();
     return el('section', { class: 'card' }, [
       el('h2', { text: 'About ' + k.first }),
-      el('div', { class: 'hint', text: s.type + ' taster at ' + s.time }),
+      el('div', { class: 'hint', text: 'Taster lesson at ' + s.time }),
       field(pre + 'cn', 'Full name', inp(c, 'fullName'), null, true),
       el('div', { class: 'row2' }, [field(pre + 'ck', 'Known as', inp(c, 'knownAs')),
                                     field(pre + 'cd', 'Date of birth', inp(c, 'dob', 'text', { inputmode: 'numeric', placeholder: 'dd/mm/yyyy' }), null, true)]),
@@ -412,7 +413,7 @@ function showDetails(msg) {
     var miss = [];
     if (!p.first || !p.surname) miss.push('your name');
     if (!p.mobile) miss.push('your mobile');
-    if (!p.address || !p.postcode) miss.push('your address and postcode');
+    if (!p.house || !p.address || !p.postcode) miss.push('your house number or name, street and postcode');
     if (!fm.emergencyName || !fm.emergencyPhone) miss.push('an emergency contact');
     o.slots.forEach(function (s) {
       var c = DET.children[s.ticket], k = d.kids.filter(function (x) { return x.ticket === s.ticket; })[0];
@@ -443,7 +444,7 @@ function showDetails(msg) {
     el('div', { class: 'step', text: 'Step 4 of 4' }),
     el('h1', { text: 'A few details' }),
     el('div', { class: 'info' }, [el('div', {}, ['Taster chosen: ', el('b', { text: longDate(o.date, o.day) + ', ' + o.venue })]),
-      el('div', { class: 'small', text: o.slots.map(function (s) { return s.first + ': ' + s.type + ' taster at ' + s.time; }).join(' · ') })]),
+      el('div', { class: 'small', text: o.slots.map(function (s) { return s.first + ': taster lesson at ' + s.time; }).join(' · ') })]),
     el('p', { text: 'Fields marked * are needed so we can book the taster.' }),
     you
   ].concat(kidCards).concat([
@@ -472,7 +473,7 @@ function showDone(o) {
     el('div', { class: 'card' }, [
       el('div', { class: 'step', text: group ? 'The tasters you chose' : 'The taster you chose' }),
       el('h2', { text: longDate(o.date, o.day) })
-    ].concat(o.slots.map(function (s) { return el('div', { text: (group ? s.first + ': ' : '') + s.time + ' · ' + s.type + ' taster · 15 minutes' }); }))
+    ].concat(o.slots.map(function (s) { return el('div', { text: (group ? s.first + ': ' : '') + s.time + ' · Taster lesson · 15 minutes' }); }))
      .concat([el('div', { class: 'small', text: o.address || o.venue })])),
     el('p', { text: 'Can\'t make it after all? Just email us and we\'ll sort it out.' }),
     el('p', { class: 'small' }, ['Questions? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])
