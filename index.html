@@ -270,6 +270,7 @@ function showAvailability() {
     el('div', { class: 'step', text: 'Step 2 of 4' }),
     el('h1', { text: 'Is this still right?' }),
     el('p', { text: 'This is when you told us ' + kidsNames() + ' could do weekly lessons. Please update anything that has changed, so we can offer the right lesson after the taster.' }),
+    el('p', { text: 'The more days, times and venues you can do, the sooner we\'re likely to find ' + kidsNames() + ' a regular lesson space. If you narrow your availability, it may take a little longer for the right space to come up, but we\'ll always do our best to find something that works for you.' }),
     el('section', { class: 'card', 'aria-label': 'Venues and days' }, sections),
     d.limits ? el('div', { class: 'hint' }, ['You first told us: ', el('i', { text: '"' + d.limits + '"' })]) : null,
     err, go,
@@ -319,7 +320,7 @@ function showChoose(msg) {
   screen([
     el('div', { class: 'step', text: 'Step 3 of 4' }),
     el('h1', { text: 'Choose ' + (group ? 'your' : kids[0].first + '\'s') + ' taster' }),
-    ST.availChanged ? el('div', { class: 'note', text: 'Thanks for updating your availability - we\'ll use it when we offer lessons after the taster.' }) : null,
+    ST.availChanged ? el('div', { class: 'note', text: 'Thanks for updating your availability. We\'ll use it to find a regular lesson space after the taster. Please bear in mind that changes can affect which lessons we can offer and how soon a space comes up.' }) : null,
     el('p', { text: opts.length
       ? (group ? 'Tasters for ' + kidsNames() + ' on the same visit, at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes.'
                : 'Tasters at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes. Pick the one that suits you best.')
