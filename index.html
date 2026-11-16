@@ -171,7 +171,8 @@ function showCode(msg) {
       idle(go);
       if (!r.ok) { err.textContent = r.error || 'Sorry, something went wrong.'; return; }
       ST.code = c; ST.email = m; ST.data = r;
-      showAvailability();
+      ST.avail = null; ST.option = null; DET = { parent: {}, family: { contactBy: [] }, children: {} };   // a new family: start clean
+      if (r.manage) showManage(); else showAvailability();
     }).catch(function () { idle(go); err.textContent = 'We couldn\'t connect. Please check your internet and try again.'; });
   } }, [
     field('code', 'Your taster code', code),
@@ -299,8 +300,18 @@ function showChoose(msg) {
     if (!ST.option) { err.textContent = 'Please choose a taster first.'; return; }
     showDetails();
   } });
-  var none = el('button', { type: 'button', class: 'btn secondary', text: opts.length ? 'None of these suit me' : 'Let Sports Nut know', onclick: function () {
-    if (!confirmBox(none, 'nonesuit')) return;
+  var none = el('button', { type: 'button', class: 'btn secondary', text: 'None of these suit me', onclick: function () {
+    busy(none, 'Sending...');
+    call({ action: 'nonesuit', code: ST.code, email: ST.email }).then(function (r) {
+      if (!r.ok) { idle(none); showChoose(r.error); return; }
+      screen([
+        el('h1', { text: 'No problem' }),
+        el('p', { text: 'New tasters are added regularly, so please check back with your code before it ends on ' + expiryText() + '.' }),
+        el('p', { text: 'If nothing suits by then, we\'ll keep ' + kidsNames() + ' on our waiting list and be in touch when the next tasters are ready.' }),
+        el('button', { type: 'button', class: 'btn secondary', text: 'Look at the tasters again', onclick: function () { showChoose(); } }),
+        el('p', { class: 'small' }, ['Questions? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])
+      ]);
+    }).catch(function () { idle(none); showChoose('We couldn\'t connect. Please check your internet and try again.'); });
   } });
   var sibs = d.siblingsWaiting && !group ? el('button', { type: 'button', class: 'btn secondary',
     text: 'I\'d rather wait until ' + d.siblingsWaiting + ' can come too', onclick: function () { confirmBox(sibs, 'waitsibs'); } }) : null;
@@ -312,12 +323,22 @@ function showChoose(msg) {
     el('p', { text: opts.length
       ? (group ? 'Tasters for ' + kidsNames() + ' on the same visit, at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes.'
                : 'Tasters at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes. Pick the one that suits you best.')
-      : 'Sorry, there are no tasters you can book in the next ' + weeks + ' weeks just now. Let us know and we\'ll be in touch when the next ones are ready.' }),
+      : 'Sorry, there are no tasters you can book in the next ' + weeks + ' weeks just now.' }),
     list, err,
+    el('div', { class: 'info' }, [el('div', { class: 't', text: 'New tasters are added regularly' }),
+      el('p', { style: 'font-size:15px', text: 'If none suit today, do check back with your code before it ends on ' + expiryText() + '. If nothing suits by then, we\'ll keep ' + kidsNames() + ' on our waiting list.' })]),
     opts.length ? go : null, none, sibs,
-    el('p', { class: 'small', text: 'If none suit, we\'ll keep ' + kidsNames() + ' on our list and be in touch when the next tasters are ready.' }),
     el('button', { type: 'button', class: 'btn link', text: 'Back', onclick: showAvailability })
   ]);
+}
+function expiryText() {
+  var e = (ST.data && ST.data.expires) || '';
+  var m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(e);
+  if (!m) return 'the date in your email';
+  var y = Number(m[3]); if (y < 100) y += 2000;
+  var d = new Date(y, Number(m[2]) - 1, Number(m[1]));
+  var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days[d.getDay()] + ' ' + ('0' + d.getDate()).slice(-2) + '/' + ('0' + (d.getMonth() + 1)).slice(-2) + '/' + d.getFullYear();
 }
 function confirmBox(btn, action) {
   var d = ST.data;
@@ -347,6 +368,11 @@ function confirmBox(btn, action) {
 var DET = { parent: {}, family: { contactBy: [] }, children: {} };
 function showDetails(msg) {
   var d = ST.data, o = ST.option, p = DET.parent, fm = DET.family;
+  // fill in what we already know from the Join Us form (only the first time this screen opens)
+  if (!DET.filled && d.prefill) {
+    ['first', 'surname', 'mobile', 'landline', 'house', 'address', 'postcode'].forEach(function (k) { if (!p[k] && d.prefill[k]) p[k] = d.prefill[k]; });
+    DET.filled = true;
+  }
   var err = el('div', { class: 'error', role: 'alert', text: msg || '' });
   function inp(obj, key, type, extra) {
     var i = el('input', Object.assign({ type: type || 'text', value: obj[key] || '' }, extra || {}));
@@ -445,7 +471,8 @@ function showDetails(msg) {
     el('h1', { text: 'A few details' }),
     el('div', { class: 'info' }, [el('div', {}, ['Taster chosen: ', el('b', { text: longDate(o.date, o.day) + ', ' + o.venue })]),
       el('div', { class: 'small', text: o.slots.map(function (s) { return s.first + ': taster lesson at ' + s.time; }).join(' · ') })]),
-    el('p', { text: 'Fields marked * are needed so we can book the taster.' }),
+    el('p', { text: (d.prefill && (d.prefill.first || d.prefill.mobile || d.prefill.address) ? 'We\'ve filled in what you told us on your Join Us form - please check it and add the rest. ' : '') +
+      'Fields marked * are needed so we can book the taster.' }),
     you
   ].concat(kidCards).concat([
     el('section', { class: 'card' }, [
@@ -475,8 +502,97 @@ function showDone(o) {
       el('h2', { text: longDate(o.date, o.day) })
     ].concat(o.slots.map(function (s) { return el('div', { text: (group ? s.first + ': ' : '') + s.time + ' · Taster lesson · 15 minutes' }); }))
      .concat([el('div', { class: 'small', text: o.address || o.venue })])),
-    el('p', { text: 'Can\'t make it after all? Just email us and we\'ll sort it out.' }),
+    el('p', { text: 'Need to change or cancel? Come back to this page with the same link and code, up to 24 hours before your taster.' }),
     el('p', { class: 'small' }, ['Questions? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])
+  ]);
+}
+
+// ---------- already booked: see, change or cancel ----------
+function bookingCard(bks) {
+  return el('div', { class: 'card' }, [el('div', { class: 'step', text: bks.length > 1 ? 'Your tasters' : 'Your taster' })]
+    .concat(bks.length ? [el('h2', { text: longDate(bks[0].date, bks[0].day) })] : [])
+    .concat(bks.map(function (b) { return el('div', { text: (bks.length > 1 ? b.first + ': ' : '') + b.time + ' · Taster lesson · 15 minutes' }); }))
+    .concat(bks.length ? [el('div', { class: 'small', text: bks[0].address || bks[0].venue })] : []));
+}
+function showManage(msg) {
+  var d = ST.data, bks = d.bookings || [];
+  var err = el('div', { class: 'error', role: 'alert', text: msg || '' });
+  var parts = [
+    el('h1', { text: bks.length ? 'Your taster booking' : 'We couldn\'t find your booking' }),
+    bks.length ? el('p', { text: 'Here\'s the taster booked for ' + kidsNames() + '.' }) : el('p', { text: 'Please email info@sports-nut.co.uk and we\'ll help.' }),
+    bks.length ? bookingCard(bks) : null, err
+  ];
+  if (bks.length && d.canChange) {
+    var change = el('button', { type: 'button', class: 'btn primary', text: 'Change to another date', onclick: function () { ST.option = null; showChange(); } });
+    function cancelBtn(leave) {
+      var label = leave ? 'Cancel taster & remove me from the waiting list - we no longer need lessons' : 'Cancel taster and stay on the waiting list';
+      var btn = el('button', { type: 'button', class: 'btn secondary', text: label, onclick: function () {
+        if (btn.dataset.sure !== '1') {
+          btn.dataset.sure = '1'; btn.textContent = leave ? 'Yes, cancel and remove us from the list' : 'Yes, cancel the taster';
+          btn.parentNode.insertBefore(el('div', { class: 'note', text: leave
+            ? 'Are you sure? The taster will be cancelled and ' + kidsNames() + ' will be taken off our waiting list. If you change your mind later, just fill in our Join Us form again.'
+            : 'Are you sure? The place will be offered to another family. We\'ll keep ' + kidsNames() + ' on our waiting list.' }), btn);
+          return;
+        }
+        busy(btn, 'Cancelling...');
+        call({ action: 'cancel', leave: leave, code: ST.code, email: ST.email }).then(function (r) {
+          if (!r.ok) { idle(btn); showManage(r.error); return; }
+          screen([el('h1', { text: 'Your taster has been cancelled' }),
+            el('p', { text: leave
+              ? 'Thank you for letting us know. We\'ve cancelled the taster and will take ' + kidsNames() + ' off our waiting list. If you ever change your mind, you\'re very welcome to fill in our Join Us form again.'
+              : 'Thank you for letting us know. We\'ll keep ' + kidsNames() + ' on our waiting list and be in touch when we can offer another taster.' }),
+            el('p', { class: 'small' }, ['Questions? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])]);
+        }).catch(function () { idle(btn); showManage('We couldn\'t connect. Please check your internet and try again.'); });
+      } });
+      return btn;
+    }
+    var cancel = cancelBtn(false), leaveBtn = cancelBtn(true);
+    parts.push(change, cancel, leaveBtn, el('p', { class: 'small', text: 'You can change or cancel online up to ' + (d.hours || 24) + ' hours before your taster.' }));
+  } else if (bks.length) {
+    parts.push(el('div', { class: 'note', text: 'It\'s now less than ' + (d.hours || 24) + ' hours until your taster, so it can\'t be changed online. If you need to change or cancel, please email info@sports-nut.co.uk or call 0330 1248238.' }));
+  }
+  parts.push(el('p', { class: 'small' }, ['Questions? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })]));
+  screen(parts);
+}
+function showChange(msg) {
+  var d = ST.data, opts = d.options || [], group = d.kids.length > 1;
+  var list = el('div', { style: 'display:flex;flex-direction:column;gap:10px', role: 'group', 'aria-label': 'Tasters you can change to' });
+  var err = el('div', { class: 'error', role: 'alert', text: msg || '' });
+  opts.forEach(function (o) {
+    var who = group ? o.slots.map(function (s) { return s.first + ' ' + s.time; }).join(' · ') : o.time;
+    var b = el('button', { type: 'button', class: 'opt', 'aria-pressed': 'false', onclick: function () {
+      ST.option = o; [].forEach.call(list.children, function (x) { x.setAttribute('aria-pressed', String(x === b)); }); err.textContent = '';
+    } }, [el('div', {}, [el('div', { class: 'when', text: longDate(o.date, o.day) }), el('div', { class: 'where', text: who + ' · ' + o.venue })])]);
+    list.appendChild(b);
+  });
+  var go = el('button', { type: 'button', class: 'btn primary', text: 'Change to this date', onclick: function () {
+    if (!ST.option) { err.textContent = 'Please choose a new date first.'; return; }
+    busy(go, 'Changing...');
+    call({ action: 'change', code: ST.code, email: ST.email, option: ST.option.key }).then(function (r) {
+      if (r.ok) {
+        var o = r.option;
+        screen([el('h1', { text: 'Your taster has been changed' }),
+          el('p', { text: 'We\'ve moved ' + kidsNames() + '\'s taster to the new date below. You\'ll get an updated booking confirmation from us within 2 working days.' }),
+          bookingCard([{ date: o.date, day: o.day, time: o.slots.map(function (x) { return x.time; }).sort()[0], venue: o.venue, address: o.address, first: '' }]),
+          el('p', { text: 'Need to change or cancel again? Come back to this page with the same link and code, up to ' + (d.hours || 24) + ' hours before your taster.' }),
+          el('p', { class: 'small' }, ['Questions? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])]);
+        return;
+      }
+      idle(go);
+      if (r.gone) {
+        call({ action: 'check', code: ST.code, email: ST.email }).then(function (c2) { if (c2.ok) { ST.data = c2; showChange(r.error); } else showCode(c2.error); });
+        return;
+      }
+      if (r.late) { showManage(r.error); return; }
+      err.textContent = r.error || 'Sorry, something went wrong. Please try again.';
+    }).catch(function () { idle(go); err.textContent = 'We couldn\'t connect. Please check your internet and try again.'; });
+  } });
+  screen([
+    el('h1', { text: 'Choose a new date' }),
+    el('p', { text: opts.length ? 'Tasters at your venues over the next ' + (d.weeks || 4) + ' weeks. Your current booking stays in place until you choose a new one.'
+                                : 'Sorry, there are no other tasters you can change to just now. Your current booking is still in place.' }),
+    list, err, opts.length ? go : null,
+    el('button', { type: 'button', class: 'btn link', text: 'Back to my booking', onclick: function () { showManage(); } })
   ]);
 }
 
