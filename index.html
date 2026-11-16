@@ -318,7 +318,7 @@ function showChoose(msg) {
   var weeks = d.weeks || 4;
   screen([
     el('div', { class: 'step', text: 'Step 3 of 4' }),
-    el('h1', { text: 'Choose ' + (group ? 'your' : kids[0].first + '\'s') + ' taster' }),
+    el('h1', { text: group ? 'Choose your taster' : 'Choose a taster for ' + kids[0].first }),
     ST.availChanged ? el('div', { class: 'note', text: 'Thanks for updating your availability. We\'ll use it to find a regular lesson space after the taster. Please bear in mind that changes can affect which lessons we can offer and how soon a space comes up.' }) : null,
     el('p', { text: opts.length
       ? (group ? 'Tasters for ' + kidsNames() + ' on the same visit, at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes.'
@@ -409,12 +409,12 @@ function showDetails(msg) {
     var no = el('input', { type: 'radio', name: pre + 'med', id: pre + 'mn', checked: c.medical === 'No', onchange: function () { c.medical = 'No'; drawMed(); } });
     drawMed();
     var addrBox = el('div');
-    function drawAddr() { addrBox.textContent = ''; if (c.sameAddress === false) addrBox.appendChild(field(pre + 'ad', k.first + '\'s address and postcode', inp(c, 'address'), null, true)); }
+    function drawAddr() { addrBox.textContent = ''; if (c.sameAddress === false) addrBox.appendChild(field(pre + 'ad', 'Address and postcode for ' + k.first, inp(c, 'address'), null, true)); }
     var same = el('input', { type: 'checkbox', id: pre + 'sa', checked: c.sameAddress !== false, onchange: function () { c.sameAddress = same.checked; drawAddr(); } });
     drawAddr();
     return el('section', { class: 'card' }, [
       el('h2', { text: 'About ' + k.first }),
-      el('div', { class: 'hint', text: 'Taster lesson at ' + s.time }),
+      el('div', { class: 'hint', text: 'Taster session at ' + s.time }),
       field(pre + 'cn', 'Full name', inp(c, 'fullName'), null, true),
       el('div', { class: 'row2' }, [field(pre + 'ck', 'Known as', inp(c, 'knownAs')),
                                     field(pre + 'cd', 'Date of birth', inp(c, 'dob', 'text', { inputmode: 'numeric', placeholder: 'dd/mm/yyyy' }), null, true)]),
@@ -446,13 +446,13 @@ function showDetails(msg) {
     if ((fm.emergency3Name || fm.emergency3Phone || fm.emergency3Relationship) && (!fm.emergency3Name || !fm.emergency3Phone)) miss.push('the name and phone for your other emergency contact (or leave it all blank)');
     o.slots.forEach(function (s) {
       var c = DET.children[s.ticket], k = d.kids.filter(function (x) { return x.ticket === s.ticket; })[0];
-      if (!c.fullName || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(String(c.dob || '').trim())) miss.push(k.first + '\'s name and date of birth (dd/mm/yyyy)');
-      if (!c.gender || !c.esl) miss.push(k.first + '\'s gender and language');
-      if (c.sameAddress === false && !c.address) miss.push(k.first + '\'s address');
+      if (!c.fullName || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(String(c.dob || '').trim())) miss.push('the name and date of birth (dd/mm/yyyy) for ' + k.first);
+      if (!c.gender || !c.esl) miss.push('the gender and language for ' + k.first);
+      if (c.sameAddress === false && !c.address) miss.push('the address for ' + k.first);
       if (!c.medical) miss.push('whether ' + k.first + ' has any medical needs');
-      if (c.medical === 'Yes' && !String(c.medicalDetails || '').trim()) miss.push('details of ' + k.first + '\'s medical needs');
-      if (c.medical === 'Yes' && !c.medConsent) miss.push('your consent for us to keep ' + k.first + '\'s medical information');
-      if (!c.photo) miss.push(k.first + '\'s photo consent');
+      if (c.medical === 'Yes' && !String(c.medicalDetails || '').trim()) miss.push('details of the medical needs for ' + k.first);
+      if (c.medical === 'Yes' && !c.medConsent) miss.push('your consent for us to keep the medical information for ' + k.first);
+      if (!c.photo) miss.push('photo consent for ' + k.first);
     });
     if (miss.length) { err.textContent = 'Please add ' + names(miss) + '.'; err.scrollIntoView({ block: 'center' }); return; }
     busy(send, 'Sending...'); err.textContent = '';
@@ -473,7 +473,7 @@ function showDetails(msg) {
     el('div', { class: 'step', text: 'Step 4 of 4' }),
     el('h1', { text: 'A few details' }),
     el('div', { class: 'info' }, [el('div', {}, ['Taster chosen: ', el('b', { text: longDate(o.date, o.day) + ', ' + o.venue })]),
-      el('div', { class: 'small', text: o.slots.map(function (s) { return s.first + ': taster lesson at ' + s.time; }).join(' · ') })]),
+      el('div', { class: 'small', text: o.slots.map(function (s) { return s.first + ': taster session at ' + s.time; }).join(' · ') })]),
     el('p', { text: (d.prefill && (d.prefill.first || d.prefill.mobile || d.prefill.address) ? 'We\'ve filled in what you told us on your Join Us form - please check it and add the rest. ' : '') +
       'Fields marked * are needed so we can book the taster.' }),
     you
@@ -509,7 +509,7 @@ function showDone(o) {
     el('div', { class: 'card' }, [
       el('div', { class: 'step', text: group ? 'The tasters you chose' : 'The taster you chose' }),
       el('h2', { text: longDate(o.date, o.day) })
-    ].concat(o.slots.map(function (s) { return el('div', { text: (group ? s.first + ': ' : '') + s.time + ' · Taster lesson · 15 minutes' }); }))
+    ].concat(o.slots.map(function (s) { return el('div', { text: (group ? s.first + ': ' : '') + s.time + ' · Taster session · 15 minutes' }); }))
      .concat([el('div', { class: 'small', text: o.address || o.venue })])),
     el('p', { text: 'Need to change or cancel? Come back to this page with the same link and code, up to 24 hours before your taster.' }),
     el('p', { class: 'small' }, ['Questions? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])
@@ -520,7 +520,7 @@ function showDone(o) {
 function bookingCard(bks) {
   return el('div', { class: 'card' }, [el('div', { class: 'step', text: bks.length > 1 ? 'Your tasters' : 'Your taster' })]
     .concat(bks.length ? [el('h2', { text: longDate(bks[0].date, bks[0].day) })] : [])
-    .concat(bks.map(function (b) { return el('div', { text: (bks.length > 1 ? b.first + ': ' : '') + b.time + ' · Taster lesson · 15 minutes' }); }))
+    .concat(bks.map(function (b) { return el('div', { text: (bks.length > 1 ? b.first + ': ' : '') + b.time + ' · Taster session · 15 minutes' }); }))
     .concat(bks.length ? [el('div', { class: 'small', text: bks[0].address || bks[0].venue })] : []));
 }
 function showManage(msg) {
@@ -581,7 +581,7 @@ function showChange(msg) {
       if (r.ok) {
         var o = r.option;
         screen([el('h1', { text: 'Your taster has been changed' }),
-          el('p', { text: 'We\'ve moved ' + kidsNames() + '\'s taster to the new date below. You\'ll get an updated booking confirmation from us within 2 working days.' }),
+          el('p', { text: 'We\'ve moved the taster for ' + kidsNames() + ' to the new date below. You\'ll get an updated booking confirmation from us within 2 working days.' }),
           bookingCard([{ date: o.date, day: o.day, time: o.slots.map(function (x) { return x.time; }).sort()[0], venue: o.venue, address: o.address, first: '' }]),
           el('p', { text: 'Need to change or cancel again? Come back to this page with the same link and code, up to ' + (d.hours || 24) + ' hours before your taster.' }),
           el('p', { class: 'small' }, ['Questions? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])]);
