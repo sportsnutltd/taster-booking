@@ -119,7 +119,7 @@ var DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 
 var PRIVACY_URL = 'https://www.sports-nut.co.uk/privacy-policy/';
 
 var app = document.getElementById('app');
-var ST = { code: '', email: '', data: null, avail: null, availText: '', availChanged: false, option: null };
+var ST = { code: '', email: '', data: null, avail: null, availNote: '', availText: '', availChanged: false, option: null };
 
 // ---------- helpers ----------
 function el(tag, attrs, kids) {
@@ -171,7 +171,7 @@ function showCode(msg) {
       idle(go);
       if (!r.ok) { err.textContent = r.error || 'Sorry, something went wrong.'; return; }
       ST.code = c; ST.email = m; ST.data = r;
-      ST.avail = null; ST.option = null; DET = { parent: {}, family: { contactBy: [] }, children: {} };   // a new family: start clean
+      ST.avail = null; ST.availNote = ''; ST.option = null; DET = { parent: {}, family: { contactBy: [] }, children: {} };   // a new family: start clean
       if (r.manage) showManage(); else showAvailability();
     }).catch(function () { idle(go); err.textContent = 'We couldn\'t connect. Please check your internet and try again.'; });
   } }, [
@@ -206,18 +206,23 @@ function startAvail() {
   Object.keys(d.venueDays).forEach(function (v) {
     var on = d.venues.indexOf(v) >= 0;
     a[v] = { on: on, days: {} };
-    d.venueDays[v].forEach(function (day) { a[v].days[day] = { on: on && d.days.indexOf(day) >= 0, mode: 'Any time', time: '' }; });
+    d.venueDays[v].forEach(function (day) { a[v].days[day] = { on: on && d.days.indexOf(day) >= 0, mode: 'Either' }; });
   });
   ST.avail = a; ST.availStart = JSON.stringify(a);
   return a;
 }
+function isWeekend(day) { return day === 'Saturday' || day === 'Sunday'; }
+var WEEKEND_TIMES = [['Either', 'Any time'], ['Morning', 'Mornings only (before 12:00)'], ['Afternoon', 'Afternoons only (12:00 onwards)']];
 function availText(a) {
-  return Object.keys(a).filter(function (v) { return a[v].on; }).map(function (v) {
+  var t = Object.keys(a).filter(function (v) { return a[v].on; }).map(function (v) {
     var ds = Object.keys(a[v].days).filter(function (d) { return a[v].days[d].on; }).map(function (d) {
-      var x = a[v].days[d]; return d.slice(0, 3) + ' ' + (x.mode === 'Any time' || !x.time ? 'any time' : x.mode.toLowerCase() + ' ' + x.time);
+      var x = a[v].days[d];
+      return d.slice(0, 3) + (isWeekend(d) && x.mode === 'Morning' ? ' mornings' : isWeekend(d) && x.mode === 'Afternoon' ? ' afternoons' : isWeekend(d) ? ' any time' : '');
     });
     return v + ': ' + (ds.join(', ') || 'no days ticked');
   }).join('; ');
+  var note = String(ST.availNote || '').trim();
+  return t + (note ? '. Times: ' + note : '');
 }
 function showAvailability() {
   var d = ST.data, a = startAvail();
@@ -234,16 +239,10 @@ function showAvailability() {
         var x = a[v].days[day], id = 'd-' + v + '-' + day;
         var cb = el('input', { type: 'checkbox', id: id, checked: x.on, onchange: function () { x.on = cb.checked; draw(); } });
         var row = el('div', { class: 'dayrow' }, [el('div', { class: 'check' }, [cb, el('label', { for: id, text: day })])]);
-        if (x.on) {
-          var sel = el('select', { 'aria-label': day + ' times', onchange: function () { x.mode = sel.value; draw(); } });
-          ['Any time', 'From', 'Until'].forEach(function (m) { var o = el('option', { value: m, text: m }); if (m === x.mode) o.selected = true; sel.appendChild(o); });
-          var times = el('div', { class: 'times' + (x.mode === 'Any time' ? ' any' : '') }, [sel]);
-          if (x.mode !== 'Any time') {
-            var t = el('input', { type: 'text', inputmode: 'numeric', placeholder: '17:30', value: x.time, 'aria-label': day + ' ' + x.mode.toLowerCase(),
-              oninput: function () { x.time = t.value.trim(); } });
-            times.appendChild(t);
-          }
-          row.appendChild(times);
+        if (x.on && isWeekend(day)) {
+          var sel = el('select', { 'aria-label': day + ' morning or afternoon', onchange: function () { x.mode = sel.value; } });
+          WEEKEND_TIMES.forEach(function (m) { var o = el('option', { value: m[0], text: m[1] }); if (m[0] === x.mode) o.selected = true; sel.appendChild(o); });
+          row.appendChild(el('div', { class: 'times any' }, [sel]));
         }
         box.appendChild(row);
       });
@@ -251,19 +250,18 @@ function showAvailability() {
     draw();
     return box;
   });
+  var noteBox = el('textarea', { rows: 2, id: 'availnote', placeholder: 'For example: can\'t do before 17:30 on Tuesdays, or not before 9:00 on Saturdays' });
+  noteBox.value = ST.availNote || '';
   var go = el('button', { type: 'button', class: 'btn primary', text: 'This is right, continue', onclick: function () {
-    var any = false, bad = '';
+    var any = false;
     Object.keys(a).forEach(function (v) {
       if (!a[v].on) return;
-      Object.keys(a[v].days).forEach(function (day) {
-        var x = a[v].days[day]; if (!x.on) return; any = true;
-        if (x.mode !== 'Any time' && !/^\d{1,2}[:.]\d{2}$/.test(x.time)) bad = 'Please put the ' + day + ' time like 17:30.';
-      });
+      Object.keys(a[v].days).forEach(function (day) { if (a[v].days[day].on) any = true; });
     });
     if (!any) { err.textContent = 'Please tick at least one day you could do weekly lessons.'; return; }
-    if (bad) { err.textContent = bad; return; }
+    ST.availNote = noteBox.value.trim();
     ST.availText = availText(a);
-    ST.availChanged = JSON.stringify(a) !== ST.availStart;
+    ST.availChanged = JSON.stringify(a) !== ST.availStart || !!ST.availNote;
     showChoose();
   } });
   screen([
@@ -272,6 +270,7 @@ function showAvailability() {
     el('p', { text: 'This is when you told us ' + kidsNames() + ' could do weekly lessons. Please update anything that has changed, so we can offer the right lesson after the taster.' }),
     el('p', { text: 'The more days, times and venues you can do, the sooner we\'re likely to find ' + kidsNames() + ' a regular lesson space. If you narrow your availability, it may take a little longer for the right space to come up, but we\'ll always do our best to find something that works for you.' }),
     el('section', { class: 'card', 'aria-label': 'Venues and days' }, sections),
+    field('availnote', 'Anything we should know about times? (optional)', noteBox),
     d.limits ? el('div', { class: 'hint' }, ['You first told us: ', el('i', { text: '"' + d.limits + '"' })]) : null,
     err, go,
     el('button', { type: 'button', class: 'btn link', text: 'Back', onclick: function () { showCode(); } })
@@ -441,7 +440,10 @@ function showDetails(msg) {
     if (!p.first || !p.surname) miss.push('your name');
     if (!p.mobile) miss.push('your mobile');
     if (!p.house || !p.address || !p.postcode) miss.push('your house number or name, street and postcode');
-    if (!fm.emergencyName || !fm.emergencyPhone) miss.push('an emergency contact');
+    if (!fm.emergencyName || !fm.emergencyPhone || !fm.emergencyRelationship) miss.push('a second emergency contact (name, phone and relationship)');
+    var digits = function (v) { return String(v || '').replace(/\D/g, '').replace(/^44/, '0'); };
+    if (fm.emergencyPhone && digits(fm.emergencyPhone) === digits(p.mobile)) miss.push('a different phone number for your second emergency contact (it\'s the same as your mobile)');
+    if ((fm.emergency3Name || fm.emergency3Phone || fm.emergency3Relationship) && (!fm.emergency3Name || !fm.emergency3Phone)) miss.push('the name and phone for your other emergency contact (or leave it all blank)');
     o.slots.forEach(function (s) {
       var c = DET.children[s.ticket], k = d.kids.filter(function (x) { return x.ticket === s.ticket; })[0];
       if (!c.fullName || !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(String(c.dob || '').trim())) miss.push(k.first + '\'s name and date of birth (dd/mm/yyyy)');
@@ -477,9 +479,15 @@ function showDetails(msg) {
     you
   ].concat(kidCards).concat([
     el('section', { class: 'card' }, [
-      el('h2', { text: 'Emergency contact' }),
+      el('h2', { text: 'Second emergency contact' }),
+      el('div', { class: 'hint', text: 'We\'ll use you as the main emergency contact. Please give us one other person we can call if we can\'t reach you, for example a partner, grandparent or friend.' }),
       el('div', { class: 'row2' }, [field('en', 'Name', inp(fm, 'emergencyName'), null, true), field('ep', 'Phone', inp(fm, 'emergencyPhone', 'tel'), null, true)]),
-      field('er', 'Relationship', inp(fm, 'emergencyRelationship'))
+      field('er', 'Relationship to ' + (d.kids.length > 1 ? 'the children' : (d.kids[0] && d.kids[0].first) || 'your child'), inp(fm, 'emergencyRelationship'), 'For example grandparent, aunt or family friend.', true)
+    ]),
+    el('section', { class: 'card' }, [
+      el('h2', { text: 'Another emergency contact (optional)' }),
+      el('div', { class: 'row2' }, [field('en3', 'Name', inp(fm, 'emergency3Name')), field('ep3', 'Phone', inp(fm, 'emergency3Phone', 'tel'))]),
+      field('er3', 'Relationship', inp(fm, 'emergency3Relationship'))
     ]),
     el('section', { class: 'card' }, [el('h2', { text: 'Keeping in touch' }), el('div', { class: 'hint', text: 'Happy to hear from us by' }), contact]),
     err, send,
