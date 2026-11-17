@@ -574,15 +574,20 @@ function showChange(msg) {
     } }, [el('div', {}, [el('div', { class: 'when', text: longDate(o.date, o.day) }), el('div', { class: 'where', text: who + ' · ' + o.venue })])]);
     list.appendChild(b);
   });
-  var go = el('button', { type: 'button', class: 'btn primary', text: 'Change to this date', onclick: function () {
+  var go = el('button', { type: 'button', class: 'btn primary', text: 'Request this date', onclick: function () {
     if (!ST.option) { err.textContent = 'Please choose a new date first.'; return; }
-    busy(go, 'Changing...');
+    busy(go, 'Sending...');
     call({ action: 'change', code: ST.code, email: ST.email, option: ST.option.key }).then(function (r) {
       if (r.ok) {
         var o = r.option;
-        screen([el('h1', { text: 'Your taster has been changed' }),
-          el('p', { text: 'We\'ve moved the taster for ' + kidsNames() + ' to the new date below. You\'ll get an updated booking confirmation from us within 2 working days.' }),
-          bookingCard([{ date: o.date, day: o.day, time: o.slots.map(function (x) { return x.time; }).sort()[0], venue: o.venue, address: o.address, first: '' }]),
+        var grp = o.slots.length > 1;
+        screen([el('h1', { text: 'Thank you, we\'ve got your change request' }),
+          el('p', { text: 'We\'ve held ' + (grp ? 'these places' : 'this place') + ' on the new date for ' + kidsNames() + '. Our team will now update the booking, and you\'ll receive an updated booking confirmation email from us within 2 working days.' }),
+          el('div', { class: 'card' }, [
+            el('div', { class: 'step', text: grp ? 'The new tasters you chose' : 'The new taster you chose' }),
+            el('h2', { text: longDate(o.date, o.day) })
+          ].concat(o.slots.map(function (x) { return el('div', { text: (grp ? x.first + ': ' : '') + x.time + ' · Taster session · 15 minutes' }); }))
+           .concat([el('div', { class: 'small', text: o.address || o.venue })])),
           el('p', { text: 'Need to change or cancel again? Come back to this page with the same link and code, up to ' + (d.hours || 24) + ' hours before your taster.' }),
           el('p', { class: 'small' }, ['Questions? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])]);
         return;
