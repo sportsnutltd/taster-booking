@@ -54,6 +54,7 @@ input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible
 input[readonly] { background: var(--grey); color: var(--muted); }
 #code { font-size: 22px; letter-spacing: 3px; font-weight: 900; text-transform: uppercase; border: 2px solid var(--blue); color: var(--navy); }
 .field { display: flex; flex-direction: column; gap: 6px; }
+[hidden] { display: none !important; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 420px) { .row2 { grid-template-columns: 1fr; } }
 .check { display: flex; align-items: flex-start; gap: 10px; font-size: 16px; }
@@ -171,7 +172,7 @@ function showCode(msg) {
       idle(go);
       if (!r.ok) { err.textContent = r.error || 'Sorry, something went wrong.'; return; }
       ST.code = c; ST.email = m; ST.data = r;
-      ST.avail = null; ST.availNote = ''; ST.option = null; DET = { parent: {}, family: { contactBy: [] }, children: {} };   // a new family: start clean
+      ST.avail = null; ST.availNote = ''; ST.startMode = ''; ST.startDate = ''; ST.lessonsSince = ''; ST.lessonsNote = ''; ST.option = null; DET = { parent: {}, family: { contactBy: [] }, children: {} };   // a new family: start clean
       if (r.manage) showManage(); else showAvailability();
     }).catch(function () { idle(go); err.textContent = 'We couldn\'t connect. Please check your internet and try again.'; });
   } }, [
@@ -219,8 +220,8 @@ function availText(a) {
       var x = a[v].days[d];
       return d.slice(0, 3) + (isWeekend(d) && x.mode === 'Morning' ? ' mornings' : isWeekend(d) && x.mode === 'Afternoon' ? ' afternoons' : isWeekend(d) ? ' any time' : '');
     });
-    return v + ': ' + (ds.join(', ') || 'no days ticked');
-  }).join('; ');
+    return ds.length ? v + ': ' + ds.join(', ') : '';
+  }).filter(Boolean).join('; ');
   var note = String(ST.availNote || '').trim();
   return t + (note ? '. Times: ' + note : '');
 }
@@ -250,6 +251,27 @@ function showAvailability() {
     draw();
     return box;
   });
+  // Families who joined before we asked (e.g. under 4): when they could start, and any lessons since
+  var isNew = !(d.days || []).length, extra = null, startDate, lessonsNote;
+  if (isNew) {
+    if (!ST.startMode) ST.startMode = 'asap';
+    var asap = el('input', { type: 'radio', name: 'start', id: 'st-asap', checked: ST.startMode === 'asap', onchange: function () { ST.startMode = 'asap'; dateRow.hidden = true; } });
+    var later = el('input', { type: 'radio', name: 'start', id: 'st-date', checked: ST.startMode === 'date', onchange: function () { ST.startMode = 'date'; dateRow.hidden = false; startDate.focus(); } });
+    startDate = el('input', { type: 'text', inputmode: 'numeric', id: 'st-when', placeholder: 'dd/mm/yyyy', 'aria-label': 'Start date (dd/mm/yyyy)' }); startDate.value = ST.startDate || '';
+    var dateRow = el('div', {}, [startDate]); dateRow.hidden = ST.startMode !== 'date';
+    var ly = el('input', { type: 'radio', name: 'since', id: 'ls-y', checked: ST.lessonsSince === 'Yes', onchange: function () { ST.lessonsSince = 'Yes'; noteRow.hidden = false; } });
+    var ln = el('input', { type: 'radio', name: 'since', id: 'ls-n', checked: ST.lessonsSince === 'No', onchange: function () { ST.lessonsSince = 'No'; noteRow.hidden = true; } });
+    lessonsNote = el('textarea', { rows: 2, id: 'ls-note', placeholder: 'For example: 10 weeks of lessons at another pool, can swim a width with armbands' }); lessonsNote.value = ST.lessonsNote || '';
+    var noteRow = field('ls-note', 'Where, and what can ' + kidsNames() + ' do now? (optional)', lessonsNote); noteRow.hidden = ST.lessonsSince !== 'Yes';
+    extra = el('section', { class: 'card' }, [
+      el('fieldset', {}, [el('legend', { class: 'req', text: 'When could ' + kidsNames() + ' start weekly lessons?' }),
+        el('div', { class: 'radios' }, [el('div', { class: 'check' }, [asap, el('label', { for: 'st-asap', text: 'As soon as possible' })]),
+                                        el('div', { class: 'check' }, [later, el('label', { for: 'st-date', text: 'From a date' })])]), dateRow]),
+      el('fieldset', {}, [el('legend', { class: 'req', text: 'Has ' + kidsNames() + ' had any swimming lessons since joining our waiting list?' }),
+        el('div', { class: 'radios' }, [el('div', { class: 'check' }, [ly, el('label', { for: 'ls-y', text: 'Yes' })]),
+                                        el('div', { class: 'check' }, [ln, el('label', { for: 'ls-n', text: 'No' })])]), noteRow])
+    ]);
+  }
   var noteBox = el('textarea', { rows: 2, id: 'availnote', placeholder: 'For example: can\'t do before 17:30 on Tuesdays, or not before 9:00 on Saturdays' });
   noteBox.value = ST.availNote || '';
   var go = el('button', { type: 'button', class: 'btn primary', text: 'This is right, continue', onclick: function () {
@@ -259,18 +281,29 @@ function showAvailability() {
       Object.keys(a[v].days).forEach(function (day) { if (a[v].days[day].on) any = true; });
     });
     if (!any) { err.textContent = 'Please tick at least one day you could do weekly lessons.'; return; }
+    if (isNew) {
+      ST.startDate = startDate.value.trim(); ST.lessonsNote = lessonsNote.value.trim();
+      if (ST.startMode === 'date' && !/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(ST.startDate)) { err.textContent = 'Please put the start date like 05/01/2027.'; return; }
+      if (!ST.lessonsSince) { err.textContent = 'Please say whether ' + kidsNames() + ' has had any swimming lessons since joining our waiting list.'; return; }
+      ST.startFrom = ST.startMode === 'date' ? ST.startDate : 'As soon as possible';
+    } else { ST.startFrom = ''; ST.lessonsSince = ''; ST.lessonsNote = ''; }
     ST.availNote = noteBox.value.trim();
     ST.availText = availText(a);
-    ST.availChanged = JSON.stringify(a) !== ST.availStart || !!ST.availNote;
+    ST.availNew = !(d.days || []).length;   // joined before we asked (e.g. under 4): availability is new, not a change
+    ST.availChanged = ST.availNew || JSON.stringify(a) !== ST.availStart || !!ST.availNote;
     showChoose();
   } });
   screen([
     el('div', { class: 'step', text: 'Step 2 of 4' }),
-    el('h1', { text: 'Is this still right?' }),
-    el('p', { text: 'This is when you told us ' + kidsNames() + ' could do weekly lessons. Please update anything that has changed, so we can offer the right lesson after the taster.' }),
-    el('p', { text: 'The more days, times and venues you can do, the sooner we\'re likely to find ' + kidsNames() + ' a regular lesson space. If you narrow your availability, it may take a little longer for the right space to come up, but we\'ll always do our best to find something that works for you.' }),
+    el('h1', { text: (d.days || []).length ? 'Is this still right?' : 'Which days could ' + kidsNames() + ' do weekly lessons?' }),
+    el('p', { text: (d.days || []).length
+      ? 'This is when you told us ' + kidsNames() + ' could do weekly lessons. Please update anything that has changed, so we can offer the right lesson after the taster.'
+      : 'When you joined our waiting list, ' + kidsNames() + ' was too young for us to ask. Please tick the venues and days that would suit for weekly lessons after the taster, so we can offer the right lesson.' }),
+    !(d.days || []).length ? el('div', { class: 'note', text: 'The more options you tick, the sooner we\'ll be able to offer ' + kidsNames() + ' a weekly space.' }) : null,
+    (d.days || []).length && el('p', { text: 'The more days, times and venues you can do, the sooner we\'re likely to find ' + kidsNames() + ' a regular lesson space. If you narrow your availability, it may take a little longer for the right space to come up, but we\'ll always do our best to find something that works for you.' }) || null,
     el('section', { class: 'card', 'aria-label': 'Venues and days' }, sections),
     field('availnote', 'Anything we should know about times? (optional)', noteBox),
+    extra,
     d.limits ? el('div', { class: 'hint' }, ['You first told us: ', el('i', { text: '"' + d.limits + '"' })]) : null,
     err, go,
     el('button', { type: 'button', class: 'btn link', text: 'Back', onclick: function () { showCode(); } })
@@ -319,7 +352,7 @@ function showChoose(msg) {
   screen([
     el('div', { class: 'step', text: 'Step 3 of 4' }),
     el('h1', { text: group ? 'Choose your taster' : 'Choose a taster for ' + kids[0].first }),
-    ST.availChanged ? el('div', { class: 'note', text: 'Thanks for updating your availability. We\'ll use it to find a regular lesson space after the taster. Please bear in mind that changes can affect which lessons we can offer and how soon a space comes up.' }) : null,
+    ST.availNew ? el('div', { class: 'note', text: 'Thanks for telling us which days suit. We\'ll use them to find a regular lesson space after the taster.' }) : ST.availChanged ? el('div', { class: 'note', text: 'Thanks for updating your availability. We\'ll use it to find a regular lesson space after the taster. Please bear in mind that changes can affect which lessons we can offer and how soon a space comes up.' }) : null,
     el('p', { text: opts.length
       ? (group ? 'Tasters for ' + kidsNames() + ' on the same visit, at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes.'
                : 'Tasters at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes. Pick the one that suits you best.')
@@ -457,7 +490,8 @@ function showDetails(msg) {
     if (miss.length) { err.textContent = 'Please add ' + names(miss) + '.'; err.scrollIntoView({ block: 'center' }); return; }
     busy(send, 'Sending...'); err.textContent = '';
     call({ action: 'book', code: ST.code, email: ST.email, option: o.key, parent: p, family: fm, children: DET.children,
-           availability: ST.availText, availabilityChanged: ST.availChanged }).then(function (r) {
+           availability: ST.availText, availabilityChanged: ST.availChanged, availabilityNew: !!ST.availNew,
+           startFrom: ST.startFrom || '', lessonsSince: ST.lessonsSince || '', lessonsNote: ST.lessonsNote || '' }).then(function (r) {
       if (r.ok) { showDone(r.option || o); return; }
       idle(send);
       if (r.gone) {   // that taster has just gone - fetch the latest list
