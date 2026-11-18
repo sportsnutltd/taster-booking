@@ -298,16 +298,37 @@ function showAvailability() {
     el('h1', { text: (d.days || []).length ? 'Is this still right?' : 'Which days could ' + kidsNames() + ' do weekly lessons?' }),
     el('p', { text: (d.days || []).length
       ? 'This is when you told us ' + kidsNames() + ' could do weekly lessons. Please update anything that has changed, so we can offer the right lesson after the taster.'
-      : 'When you joined our waiting list, ' + kidsNames() + ' was too young for us to ask. Please tick the venues and days that would suit for weekly lessons after the taster, so we can offer the right lesson.' }),
+      : 'We don\'t have the days that would suit ' + kidsNames() + ' for weekly lessons on our records yet. Please tick the venues and days that would suit for weekly lessons after the taster, so we can offer the right lesson.' }),
     !(d.days || []).length ? el('div', { class: 'note', text: 'The more options you tick, the sooner we\'ll be able to offer ' + kidsNames() + ' a weekly space.' }) : null,
     (d.days || []).length && el('p', { text: 'The more days, times and venues you can do, the sooner we\'re likely to find ' + kidsNames() + ' a regular lesson space. If you narrow your availability, it may take a little longer for the right space to come up, but we\'ll always do our best to find something that works for you.' }) || null,
     el('section', { class: 'card', 'aria-label': 'Venues and days' }, sections),
     field('availnote', 'Anything we should know about times? (optional)', noteBox),
     extra,
     d.limits ? el('div', { class: 'hint' }, ['You first told us: ', el('i', { text: '"' + d.limits + '"' })]) : null,
-    err, go,
+    err, go, leaveButton(err),
     el('button', { type: 'button', class: 'btn link', text: 'Back', onclick: function () { showCode(); } })
   ]);
+}
+
+// "We no longer need lessons": ends the invite and asks us to take them off the waiting list (asks "are you sure?" first)
+function leaveButton(err) {
+  var btn = el('button', { type: 'button', class: 'btn secondary', text: 'We no longer need lessons', onclick: function () {
+    if (btn.dataset.sure !== '1') {
+      btn.dataset.sure = '1'; btn.textContent = 'Yes, remove us from the waiting list';
+      btn.parentNode.insertBefore(el('div', { class: 'note', text: 'Are you sure? ' + kidsNames() + ' will be taken off our waiting list and this code will stop working. If you change your mind later, just fill in our Join Us form again.' }), btn);
+      return;
+    }
+    busy(btn, 'Sending...');
+    call({ action: 'leave', code: ST.code, email: ST.email }).then(function (r) {
+      if (!r.ok) { idle(btn); if (err) err.textContent = r.error || 'Sorry, something went wrong.'; return; }
+      screen([
+        el('h1', { text: 'Thank you for letting us know' }),
+        el('p', { text: 'We\'ll take ' + kidsNames() + ' off our waiting list. If you ever change your mind, you\'re very welcome to fill in our Join Us form again.' }),
+        el('p', { class: 'small' }, ['Questions? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])
+      ]);
+    }).catch(function () { idle(btn); if (err) err.textContent = 'We couldn\'t connect. Please check your internet and try again.'; });
+  } });
+  return btn;
 }
 
 // ---------- 3. choose ----------
@@ -360,7 +381,7 @@ function showChoose(msg) {
     list, err,
     el('div', { class: 'info' }, [el('div', { class: 't', text: 'New tasters are added regularly' }),
       el('p', { style: 'font-size:15px', text: 'If none suit today, do check back with your code before it ends on ' + expiryText() + '. If nothing suits by then, we\'ll keep ' + kidsNames() + ' on our waiting list.' })]),
-    opts.length ? go : null, none, sibs,
+    opts.length ? go : null, none, sibs, leaveButton(err),
     el('button', { type: 'button', class: 'btn link', text: 'Back', onclick: showAvailability })
   ]);
 }
