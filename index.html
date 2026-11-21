@@ -182,11 +182,11 @@ function showCode(msg) {
   ]);
   screen([
     el('div', { class: 'step', text: 'Step 1 of 4' }),
-    el('h1', { text: 'Book your taster session' }),
+    el('h1', { text: 'Book your free taster session' }),
     el('p', { text: 'Enter the code from your email, and the email address you used on our Join Us form, to choose a date that suits you.' }),
     form,
     el('div', { class: 'info' }, [el('div', { class: 't', text: 'What is a taster?' }),
-      el('p', { style: 'font-size:14px', text: 'A fun 15-minute first taste of lessons at Sports Nut. It helps us place your swimmer in the right Sports Nut Award level, meet some of our staff and settle any pre-lesson nerves.' })]),
+      el('p', { style: 'font-size:14px', text: 'A free, fun 15-minute first taste of lessons at Sports Nut - there\'s nothing to pay. It helps us place your swimmer in the right Sports Nut Award level, meet some of our staff and settle any pre-lesson nerves.' })]),
     el('p', { class: 'small' }, ['Need help? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])
   ]);
 }
@@ -375,8 +375,8 @@ function showChoose(msg) {
     el('h1', { text: group ? 'Choose your taster' : 'Choose a taster for ' + kids[0].first }),
     ST.availNew ? el('div', { class: 'note', text: 'Thanks for telling us which days suit. We\'ll use them to find a regular lesson space after the taster.' }) : ST.availChanged ? el('div', { class: 'note', text: 'Thanks for updating your availability. We\'ll use it to find a regular lesson space after the taster. Please bear in mind that changes can affect which lessons we can offer and how soon a space comes up.' }) : null,
     el('p', { text: opts.length
-      ? (group ? 'Tasters for ' + kidsNames() + ' on the same visit, at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes.'
-               : 'Tasters at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes. Pick the one that suits you best.')
+      ? (group ? 'Tasters for ' + kidsNames() + ' on the same visit, at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes and free.'
+               : 'Tasters at your venues over the next ' + weeks + ' weeks. Each taster is 15 minutes and free. Pick the one that suits you best.')
       : 'Sorry, there are no tasters you can book in the next ' + weeks + ' weeks just now.' }),
     list, err,
     el('div', { class: 'info' }, [el('div', { class: 't', text: 'New tasters are added regularly' }),
@@ -564,7 +564,7 @@ function showDone(o) {
     el('div', { class: 'card' }, [
       el('div', { class: 'step', text: group ? 'The tasters you chose' : 'The taster you chose' }),
       el('h2', { text: longDate(o.date, o.day) })
-    ].concat(o.slots.map(function (s) { return el('div', { text: (group ? s.first + ': ' : '') + s.time + ' · Taster session · 15 minutes' }); }))
+    ].concat(o.slots.map(function (s) { return el('div', { text: (group ? s.first + ': ' : '') + s.time + ' · Free taster session · 15 minutes' }); }))
      .concat([el('div', { class: 'small', text: o.address || o.venue })])),
     el('p', { text: 'Need to change or cancel? Come back to this page with the same link and code, up to 24 hours before your taster.' }),
     el('p', { class: 'small' }, ['Questions? Email ', el('a', { href: 'mailto:info@sports-nut.co.uk', text: 'info@sports-nut.co.uk' })])
